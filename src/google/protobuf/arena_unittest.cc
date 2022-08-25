@@ -45,7 +45,7 @@
 #include <google/protobuf/unittest_arena.pb.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <google/protobuf/stubs/strutil.h>
+#include "absl/strings/string_view.h"
 #include <google/protobuf/arena_test_util.h>
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/extension_set.h>
@@ -58,6 +58,7 @@
 #include <google/protobuf/unknown_field_set.h>
 #include <google/protobuf/wire_format_lite.h>
 
+#include "absl/synchronization/mutex.h"
 
 // Must be included last
 #include <google/protobuf/port_def.inc>
@@ -1419,7 +1420,7 @@ TEST(ArenaTest, BlockSizeDoubling) {
   ASSERT_GT(arena.SpaceAllocated(), first_block_size);
   auto second_block_size = (arena.SpaceAllocated() - first_block_size);
 
-  EXPECT_EQ(second_block_size, 2*first_block_size);
+  EXPECT_GE(second_block_size, 2*first_block_size);
 }
 
 TEST(ArenaTest, Alignment) {

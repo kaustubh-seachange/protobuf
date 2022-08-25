@@ -60,7 +60,7 @@
 #include <google/protobuf/generated_enum_util.h>
 #include <google/protobuf/map_type_handler.h>
 #include <google/protobuf/port.h>
-#include <google/protobuf/stubs/hash.h>
+
 
 #ifdef SWIG
 #error "You cannot SWIG proto headers"
@@ -333,6 +333,11 @@ inline size_t SpaceUsedInValues(const void*) { return 0; }
 
 }  // namespace internal
 
+#ifdef PROTOBUF_FUTURE_MAP_PAIR_UPGRADE
+// This is the class for Map's internal value_type.
+template <typename Key, typename T>
+using MapPair = std::pair<const Key, T>;
+#else
 // This is the class for Map's internal value_type. Instead of using
 // std::pair as value_type, we use this class which provides us more control of
 // its process of construction and destruction.
@@ -363,6 +368,7 @@ struct PROTOBUF_ATTRIBUTE_STANDALONE_DEBUG MapPair {
   friend class Arena;
   friend class Map<Key, T>;
 };
+#endif
 
 // Map is an associative container type used to store protobuf map
 // fields.  Each Map instance may or may not use a different hash function, a
@@ -1429,7 +1435,7 @@ class Map {
 
   void swap(Map& other) {
     if (arena() == other.arena()) {
-      InternalSwap(other);
+      InternalSwap(&other);
     } else {
       // TODO(zuguang): optimize this. The temporary copy can be allocated
       // in the same arena as the other message, and the "other = copy" can
@@ -1440,7 +1446,7 @@ class Map {
     }
   }
 
-  void InternalSwap(Map& other) { elements_.Swap(&other.elements_); }
+  void InternalSwap(Map* other) { elements_.Swap(&other->elements_); }
 
   // Access to hasher.  Currently this returns a copy, but it may
   // be modified to return a const reference in the future.

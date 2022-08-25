@@ -33,6 +33,7 @@ set(libprotobuf_srcs
   ${protobuf_SOURCE_DIR}/src/google/protobuf/generated_message_bases.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/generated_message_reflection.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/generated_message_tctable_full.cc
+  ${protobuf_SOURCE_DIR}/src/google/protobuf/generated_message_tctable_gen.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/generated_message_tctable_lite.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/generated_message_util.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/implicit_weak_message.cc
@@ -43,6 +44,7 @@ set(libprotobuf_srcs
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/printer.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/strtod.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/tokenizer.cc
+  ${protobuf_SOURCE_DIR}/src/google/protobuf/io/zero_copy_sink.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/zero_copy_stream.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/zero_copy_stream_impl.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/zero_copy_stream_impl_lite.cc
@@ -60,14 +62,10 @@ set(libprotobuf_srcs
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/bytestream.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/common.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/int128.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/status.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/statusor.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/stringpiece.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/stringprintf.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/structurally_valid.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/strutil.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/substitute.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/time.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/text_format.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/timestamp.pb.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/type.pb.cc
@@ -92,7 +90,6 @@ set(libprotobuf_srcs
   ${protobuf_SOURCE_DIR}/src/google/protobuf/util/message_differencer.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/util/time_util.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/util/type_resolver_util.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/util/zero_copy_sink.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/wire_format.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/wire_format_lite.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/wrappers.pb.cc
@@ -126,6 +123,7 @@ set(libprotobuf_hdrs
   ${protobuf_SOURCE_DIR}/src/google/protobuf/generated_message_bases.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/generated_message_reflection.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/generated_message_tctable_decl.h
+  ${protobuf_SOURCE_DIR}/src/google/protobuf/generated_message_tctable_gen.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/generated_message_tctable_impl.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/generated_message_util.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/has_bits.h
@@ -137,6 +135,7 @@ set(libprotobuf_hdrs
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/printer.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/strtod.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/tokenizer.h
+  ${protobuf_SOURCE_DIR}/src/google/protobuf/io/zero_copy_sink.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/zero_copy_stream.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/zero_copy_stream_impl.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/zero_copy_stream_impl_lite.h
@@ -163,28 +162,19 @@ set(libprotobuf_hdrs
   ${protobuf_SOURCE_DIR}/src/google/protobuf/struct.pb.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/bytestream.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/callback.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/casts.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/common.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/hash.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/int128.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/logging.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/macros.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/map_util.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/mathutil.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/mutex.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/once.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/platform_macros.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/port.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/status.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/status_macros.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/statusor.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/stl_util.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/stringpiece.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/stringprintf.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/strutil.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/substitute.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/template_util.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/time.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/text_format.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/timestamp.pb.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/type.pb.h
@@ -214,7 +204,6 @@ set(libprotobuf_hdrs
   ${protobuf_SOURCE_DIR}/src/google/protobuf/util/time_util.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/util/type_resolver.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/util/type_resolver_util.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/util/zero_copy_sink.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/wire_format.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/wire_format_lite.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/wrappers.pb.h
@@ -245,13 +234,9 @@ set(libprotobuf_lite_srcs
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/bytestream.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/common.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/int128.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/status.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/statusor.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/stringpiece.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/stringprintf.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/structurally_valid.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/strutil.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/time.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/wire_format_lite.cc
 )
 
@@ -290,27 +275,18 @@ set(libprotobuf_lite_hdrs
   ${protobuf_SOURCE_DIR}/src/google/protobuf/repeated_ptr_field.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/bytestream.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/callback.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/casts.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/common.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/hash.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/int128.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/logging.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/macros.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/map_util.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/mathutil.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/mutex.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/once.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/platform_macros.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/port.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/status.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/status_macros.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/statusor.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/stl_util.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/stringpiece.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/stringprintf.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/strutil.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/template_util.h
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/time.h
   ${protobuf_SOURCE_DIR}/src/google/protobuf/wire_format_lite.h
 )
 
@@ -771,6 +747,7 @@ set(compiler_test_files
   ${protobuf_SOURCE_DIR}/src/google/protobuf/compiler/csharp/csharp_generator_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/compiler/importer_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/compiler/java/doc_comment_unittest.cc
+  ${protobuf_SOURCE_DIR}/src/google/protobuf/compiler/java/message_serialization_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/compiler/java/plugin_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/compiler/objectivec/objectivec_helpers_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/compiler/parser_unittest.cc
@@ -815,6 +792,7 @@ set(io_test_files
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/io_win32_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/printer_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/tokenizer_unittest.cc
+  ${protobuf_SOURCE_DIR}/src/google/protobuf/io/zero_copy_sink_test.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/io/zero_copy_stream_unittest.cc
 )
 
@@ -845,7 +823,6 @@ set(util_test_files
   ${protobuf_SOURCE_DIR}/src/google/protobuf/util/message_differencer_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/util/time_util_test.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/util/type_resolver_util_test.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/util/zero_copy_sink_test.cc
 )
 
 # //src/google/protobuf/util:test_proto_srcs
@@ -871,12 +848,7 @@ set(stubs_test_files
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/bytestream_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/common_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/int128_unittest.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/status_test.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/statusor_test.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/stringpiece_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/stringprintf_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/structurally_valid_unittest.cc
   ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/strutil_unittest.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/template_util_unittest.cc
-  ${protobuf_SOURCE_DIR}/src/google/protobuf/stubs/time_test.cc
 )

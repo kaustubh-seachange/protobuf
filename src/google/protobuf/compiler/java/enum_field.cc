@@ -42,6 +42,7 @@
 #include <google/protobuf/stubs/common.h>
 #include <google/protobuf/io/printer.h>
 #include <google/protobuf/wire_format.h>
+#include "absl/strings/str_cat.h"
 #include <google/protobuf/compiler/java/context.h>
 #include <google/protobuf/compiler/java/doc_comment.h>
 #include <google/protobuf/compiler/java/helpers.h>
@@ -60,7 +61,8 @@ namespace {
 void SetEnumVariables(const FieldDescriptor* descriptor, int messageBitIndex,
                       int builderBitIndex, const FieldGeneratorInfo* info,
                       ClassNameResolver* name_resolver,
-                      std::map<std::string, std::string>* variables) {
+                      std::map<std::string, std::string>* variables,
+                      Context* context) {
   SetCommonFieldVariables(descriptor, info, variables);
 
   (*variables)["type"] =
@@ -68,12 +70,13 @@ void SetEnumVariables(const FieldDescriptor* descriptor, int messageBitIndex,
   (*variables)["kt_type"] = EscapeKotlinKeywords((*variables)["type"]);
   (*variables)["mutable_type"] =
       name_resolver->GetMutableClassName(descriptor->enum_type());
-  (*variables)["default"] = ImmutableDefaultValue(descriptor, name_resolver);
+  (*variables)["default"] =
+      ImmutableDefaultValue(descriptor, name_resolver, context->options());
   (*variables)["default_number"] =
-      StrCat(descriptor->default_value_enum()->number());
-  (*variables)["tag"] = StrCat(
+      absl::StrCat(descriptor->default_value_enum()->number());
+  (*variables)["tag"] = absl::StrCat(
       static_cast<int32_t>(internal::WireFormat::MakeTag(descriptor)));
-  (*variables)["tag_size"] = StrCat(
+  (*variables)["tag_size"] = absl::StrCat(
       internal::WireFormat::TagSize(descriptor->number(), GetType(descriptor)));
   // TODO(birdo): Add @deprecated javadoc when generating javadoc is supported
   // by the proto compiler
@@ -142,7 +145,7 @@ ImmutableEnumFieldGenerator::ImmutableEnumFieldGenerator(
     : descriptor_(descriptor), name_resolver_(context->GetNameResolver()) {
   SetEnumVariables(descriptor, messageBitIndex, builderBitIndex,
                    context->GetFieldGeneratorInfo(descriptor), name_resolver_,
-                   &variables_);
+                   &variables_, context);
 }
 
 ImmutableEnumFieldGenerator::~ImmutableEnumFieldGenerator() {}
@@ -280,6 +283,18 @@ void ImmutableEnumFieldGenerator::GenerateKotlinDslMembers(
                  "  set(value) {\n"
                  "    $kt_dsl_builder$.${$set$capitalized_name$$}$(value)\n"
                  "  }\n");
+
+  if (SupportUnknownEnumValue(descriptor_->file())) {
+    printer->Print(
+        variables_,
+        "$kt_deprecation$ var $kt_name$Value: kotlin.Int\n"
+        "  @JvmName(\"${$get$kt_capitalized_name$Value$}$\")\n"
+        "  get() = $kt_dsl_builder$.${$get$capitalized_name$Value$}$()\n"
+        "  @JvmName(\"${$set$kt_capitalized_name$Value$}$\")\n"
+        "  set(value) {\n"
+        "    $kt_dsl_builder$.${$set$capitalized_name$Value$}$(value)\n"
+        "  }\n");
+  }
 
   WriteFieldAccessorDocComment(printer, descriptor_, CLEARER,
                                /* builder */ false, /* kdoc */ true);
@@ -624,7 +639,7 @@ RepeatedImmutableEnumFieldGenerator::RepeatedImmutableEnumFieldGenerator(
     : descriptor_(descriptor), name_resolver_(context->GetNameResolver()) {
   SetEnumVariables(descriptor, messageBitIndex, builderBitIndex,
                    context->GetFieldGeneratorInfo(descriptor), name_resolver_,
-                   &variables_);
+                   &variables_, context);
 }
 
 RepeatedImmutableEnumFieldGenerator::~RepeatedImmutableEnumFieldGenerator() {}

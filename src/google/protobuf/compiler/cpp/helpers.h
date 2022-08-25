@@ -50,6 +50,7 @@
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/port.h>
 #include <google/protobuf/stubs/strutil.h>
+#include "absl/strings/str_cat.h"
 
 // Must be included last.
 #include <google/protobuf/port_def.inc>
@@ -462,35 +463,13 @@ inline bool IsProto3(const FileDescriptor* file) {
   return file->syntax() == FileDescriptor::SYNTAX_PROTO3;
 }
 
-inline bool HasHasbit(const FieldDescriptor* field) {
-  // This predicate includes proto3 message fields only if they have "optional".
-  //   Foo submsg1 = 1;           // HasHasbit() == false
-  //   optional Foo submsg2 = 2;  // HasHasbit() == true
-  // This is slightly odd, as adding "optional" to a singular proto3 field does
-  // not change the semantics or API. However whenever any field in a message
-  // has a hasbit, it forces reflection to include hasbit offsets for *all*
-  // fields, even if almost all of them are set to -1 (no hasbit). So to avoid
-  // causing a sudden size regression for ~all proto3 messages, we give proto3
-  // message fields a hasbit only if "optional" is present. If the user is
-  // explicitly writing "optional", it is likely they are writing it on
-  // primitive fields also.
-  return (field->has_optional_keyword() || field->is_required()) &&
-         !field->options().weak();
-}
-
-// Returns true if 'enum' semantics are such that unknown values are preserved
-// in the enum field itself, rather than going to the UnknownFieldSet.
-inline bool HasPreservingUnknownEnumSemantics(const FieldDescriptor* field) {
-  return field->file()->syntax() == FileDescriptor::SYNTAX_PROTO3;
-}
-
 inline bool IsCrossFileMessage(const FieldDescriptor* field) {
   return field->type() == FieldDescriptor::TYPE_MESSAGE &&
          field->message_type()->file() != field->file();
 }
 
 inline std::string MakeDefaultName(const FieldDescriptor* field) {
-  return StrCat("_i_give_permission_to_break_this_code_default_",
+  return absl::StrCat("_i_give_permission_to_break_this_code_default_",
                       FieldName(field), "_");
 }
 
@@ -505,11 +484,11 @@ inline std::string MakeDefaultName(const FieldDescriptor* field) {
 // exists at some nested level like:
 //   internal_container_._i_give_permission_to_break_this_code_default_field_;
 inline std::string MakeDefaultFieldName(const FieldDescriptor* field) {
-  return StrCat("Impl_::", MakeDefaultName(field));
+  return absl::StrCat("Impl_::", MakeDefaultName(field));
 }
 
 inline std::string MakeVarintCachedSizeName(const FieldDescriptor* field) {
-  return StrCat("_", FieldName(field), "_cached_byte_size_");
+  return absl::StrCat("_", FieldName(field), "_cached_byte_size_");
 }
 
 // Semantically distinct from MakeVarintCachedSizeName in that it gives the C++
@@ -525,7 +504,7 @@ inline std::string MakeVarintCachedSizeName(const FieldDescriptor* field) {
 //   internal_container_._field_cached_byte_size_;
 inline std::string MakeVarintCachedSizeFieldName(const FieldDescriptor* field,
                                                  bool split) {
-  return StrCat("_impl_.", split ? "_split_->" : "", "_",
+  return absl::StrCat("_impl_.", split ? "_split_->" : "", "_",
                       FieldName(field), "_cached_byte_size_");
 }
 
@@ -857,9 +836,9 @@ class PROTOC_EXPORT Formatter {
   template <typename I, typename = typename std::enable_if<
                             std::is_integral<I>::value>::type>
   static std::string ToString(I x) {
-    return StrCat(x);
+    return absl::StrCat(x);
   }
-  static std::string ToString(strings::Hex x) { return StrCat(x); }
+  static std::string ToString(absl::Hex x) { return absl::StrCat(x); }
   static std::string ToString(const FieldDescriptor* d) { return Payload(d); }
   static std::string ToString(const Descriptor* d) { return Payload(d); }
   static std::string ToString(const EnumDescriptor* d) { return Payload(d); }
@@ -935,15 +914,6 @@ class PROTOC_EXPORT NamespaceOpener {
   std::vector<std::string> name_stack_;
 };
 
-enum class Utf8CheckMode {
-  kStrict = 0,  // Parsing will fail if non UTF-8 data is in string fields.
-  kVerify = 1,  // Only log an error but parsing will succeed.
-  kNone = 2,    // No UTF-8 check.
-};
-
-Utf8CheckMode GetUtf8CheckMode(const FieldDescriptor* field,
-                               const Options& options);
-
 void GenerateUtf8CheckCodeForString(const FieldDescriptor* field,
                                     const Options& options, bool for_parse,
                                     const char* parameters,
@@ -953,43 +923,6 @@ void GenerateUtf8CheckCodeForCord(const FieldDescriptor* field,
                                   const Options& options, bool for_parse,
                                   const char* parameters,
                                   const Formatter& format);
-
-template <typename T>
-struct FieldRangeImpl {
-  struct Iterator {
-    using iterator_category = std::forward_iterator_tag;
-    using value_type = const FieldDescriptor*;
-    using difference_type = int;
-
-    value_type operator*() { return descriptor->field(idx); }
-
-    friend bool operator==(const Iterator& a, const Iterator& b) {
-      GOOGLE_DCHECK(a.descriptor == b.descriptor);
-      return a.idx == b.idx;
-    }
-    friend bool operator!=(const Iterator& a, const Iterator& b) {
-      return !(a == b);
-    }
-
-    Iterator& operator++() {
-      idx++;
-      return *this;
-    }
-
-    int idx;
-    const T* descriptor;
-  };
-
-  Iterator begin() const { return {0, descriptor}; }
-  Iterator end() const { return {descriptor->field_count(), descriptor}; }
-
-  const T* descriptor;
-};
-
-template <typename T>
-FieldRangeImpl<T> FieldRange(const T* desc) {
-  return {desc};
-}
 
 struct OneOfRangeImpl {
   struct Iterator {

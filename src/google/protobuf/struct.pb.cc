@@ -156,7 +156,7 @@ const char descriptor_table_protodef_google_2fprotobuf_2fstruct_2eproto[] PROTOB
   "rotobuf/types/known/structpb\370\001\001\242\002\003GPB\252\002\036"
   "Google.Protobuf.WellKnownTypesb\006proto3"
   ;
-static ::_pbi::once_flag descriptor_table_google_2fprotobuf_2fstruct_2eproto_once;
+static ::absl::once_flag descriptor_table_google_2fprotobuf_2fstruct_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_google_2fprotobuf_2fstruct_2eproto = {
     false, false, 638, descriptor_table_protodef_google_2fprotobuf_2fstruct_2eproto,
     "google/protobuf/struct.proto",
@@ -603,7 +603,7 @@ const char* Value::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
       // .google.protobuf.NullValue null_value = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
-          uint64_t val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          uint32_t val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
           _internal_set_null_value(static_cast<::PROTOBUF_NAMESPACE_ID::NullValue>(val));
         } else

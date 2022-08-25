@@ -82,7 +82,6 @@
 #include <google/protobuf/io/printer.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/text_format.h>
-#include <google/protobuf/stubs/map_util.h>
 #include <google/protobuf/stubs/stl_util.h>
 
 
@@ -339,9 +338,12 @@ class CommandLineInterface::ErrorPrinter
   void AddErrorOrWarning(const std::string& filename, int line, int column,
                          const std::string& message, const std::string& type,
                          std::ostream& out) {
-    // Print full path when running under MSVS
     std::string dfile;
-    if (format_ == CommandLineInterface::ERROR_FORMAT_MSVS &&
+    if (
+#ifndef PROTOBUF_OPENSOURCE
+        // Print full path when running under MSVS
+        format_ == CommandLineInterface::ERROR_FORMAT_MSVS &&
+#endif  // !PROTOBUF_OPENSOURCE
         tree_ != nullptr && tree_->VirtualFileToDiskFile(filename, &dfile)) {
       out << dfile;
     } else {
@@ -398,7 +400,6 @@ class CommandLineInterface::GeneratorContextImpl : public GeneratorContext {
 
   // Get name of all output files.
   void GetOutputFilenames(std::vector<std::string>* output_filenames);
-
   // implements GeneratorContext --------------------------------------
   io::ZeroCopyOutputStream* Open(const std::string& filename) override;
   io::ZeroCopyOutputStream* OpenForAppend(const std::string& filename) override;
@@ -963,6 +964,7 @@ PopulateSingleSimpleDescriptorDatabase(const std::string& descriptor_set_name);
 
 int CommandLineInterface::Run(int argc, const char* const argv[]) {
   Clear();
+
   switch (ParseArguments(argc, argv)) {
     case PARSE_ARGUMENT_DONE_AND_EXIT:
       return 0;
@@ -1076,7 +1078,6 @@ int CommandLineInterface::Run(int argc, const char* const argv[]) {
     }
   }
 
-  // Write all output to disk.
   for (const auto& pair : output_directories) {
     const std::string& location = pair.first;
     GeneratorContextImpl* directory = pair.second.get();
@@ -1151,7 +1152,6 @@ int CommandLineInterface::Run(int argc, const char* const argv[]) {
         // Do not add a default case.
     }
   }
-
   return 0;
 }
 
@@ -1843,7 +1843,7 @@ CommandLineInterface::InterpretArgument(const std::string& name,
     if (!version_info_.empty()) {
       std::cout << version_info_ << std::endl;
     }
-    std::cout << "libprotoc " << internal::VersionString(PROTOBUF_VERSION)
+    std::cout << "libprotoc " << internal::ProtocVersionString(PROTOBUF_VERSION)
               << PROTOBUF_VERSION_SUFFIX << std::endl;
     return PARSE_ARGUMENT_DONE_AND_EXIT;  // Exit without running compiler.
 
@@ -1945,12 +1945,11 @@ CommandLineInterface::InterpretArgument(const std::string& name,
     print_mode_ = PRINT_FREE_FIELDS;
   } else {
     // Some other flag.  Look it up in the generators list.
-    const GeneratorInfo* generator_info =
-        FindOrNull(generators_by_flag_name_, name);
+    const GeneratorInfo* generator_info = FindGeneratorByFlag(name);
     if (generator_info == nullptr &&
         (plugin_prefix_.empty() || !HasSuffixString(name, "_out"))) {
       // Check if it's a generator option flag.
-      generator_info = FindOrNull(generators_by_option_name_, name);
+      generator_info = FindGeneratorByOption(name);
       if (generator_info != nullptr) {
         std::string* parameters =
             &generator_parameters_[generator_info->flag_name];
@@ -2082,16 +2081,15 @@ Parse PROTO_FILES and generate output based on the options given:
                               the executable's own name differs.)";
   }
 
-  for (GeneratorMap::iterator iter = generators_by_flag_name_.begin();
-       iter != generators_by_flag_name_.end(); ++iter) {
+  for (const auto& kv : generators_by_flag_name_) {
     // FIXME(kenton):  If the text is long enough it will wrap, which is ugly,
     //   but fixing this nicely (e.g. splitting on spaces) is probably more
     //   trouble than it's worth.
     std::cout << std::endl
-              << "  " << iter->first << "=OUT_DIR "
-              << std::string(19 - iter->first.size(),
+              << "  " << kv.first << "=OUT_DIR "
+              << std::string(19 - kv.first.size(),
                              ' ')  // Spaces for alignment.
-              << iter->second.help_text;
+              << kv.second.help_text;
   }
   std::cout << R"(
   @<filename>                 Read options and filenames from file. If a
@@ -2123,7 +2121,8 @@ bool CommandLineInterface::EnforceProto3OptionalSupport(
                   << codegen_name
                   << " hasn't been updated to support optional fields in "
                      "proto3. Please ask the owner of this code generator to "
-                     "support proto3 optional.";
+                     "support proto3 optional."
+                  << std::endl;
         return false;
       }
     }
@@ -2504,6 +2503,20 @@ void CommandLineInterface::GetTransitiveDependencies(
   if (include_source_code_info) {
     file->CopySourceCodeInfoTo(new_descriptor);
   }
+}
+
+const CommandLineInterface::GeneratorInfo*
+CommandLineInterface::FindGeneratorByFlag(const std::string& name) const {
+  auto it = generators_by_flag_name_.find(name);
+  if (it == generators_by_flag_name_.end()) return nullptr;
+  return &it->second;
+}
+
+const CommandLineInterface::GeneratorInfo*
+CommandLineInterface::FindGeneratorByOption(const std::string& option) const {
+  auto it = generators_by_option_name_.find(option);
+  if (it == generators_by_option_name_.end()) return nullptr;
+  return &it->second;
 }
 
 namespace {

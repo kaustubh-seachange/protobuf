@@ -55,6 +55,10 @@
 #include <google/protobuf/compiler/csharp/csharp_repeated_primitive_field.h>
 #include <google/protobuf/compiler/csharp/csharp_wrapper_field.h>
 
+#include "absl/container/flat_hash_set.h"
+#include "absl/strings/string_view.h"
+#include "absl/strings/ascii.h"
+
 namespace google {
 namespace protobuf {
 namespace compiler {
@@ -144,6 +148,7 @@ std::string UnderscoresToCamelCase(const std::string& input,
                                    bool cap_next_letter,
                                    bool preserve_period) {
   std::string result;
+
   // Note:  I distrust ctype.h due to locales.
   for (int i = 0; i < input.size(); i++) {
     if ('a' <= input[i] && input[i] <= 'z') {
@@ -177,6 +182,23 @@ std::string UnderscoresToCamelCase(const std::string& input,
   if (input.size() > 0 && input[input.size() - 1] == '#') {
     result += '_';
   }
+
+  // https://github.com/protocolbuffers/protobuf/issues/8101
+  // To avoid generating invalid identifiers - if the input string
+  // starts with _<digit> (or multiple underscores then digit) then
+  // we need to preserve the underscore as an identifier cannot start
+  // with a digit.
+  // This check is being done after the loop rather than before
+  // to handle the case where there are multiple underscores before the
+  // first digit. We let them all be consumed so we can see if we would
+  // start with a digit.
+  // Note: not preserving leading underscores for all otherwise valid identifiers
+  // so as to not break anything that relies on the existing behaviour
+  if (result.size() > 0 && ('0' <= result[0] && result[0] <= '9')
+      && input.size() > 0 && input[0] == '_')
+  {
+      result.insert(0, 1, '_');
+  }
   return result;
 }
 
@@ -200,18 +222,18 @@ std::string ShoutyToPascalCase(const std::string& input) {
   char previous = '_';
   for (int i = 0; i < input.size(); i++) {
     char current = input[i];
-    if (!ascii_isalnum(current)) {
+    if (!absl::ascii_isalnum(current)) {
       previous = current;
       continue;
     }
-    if (!ascii_isalnum(previous)) {
-      result += ascii_toupper(current);
-    } else if (ascii_isdigit(previous)) {
-      result += ascii_toupper(current);
-    } else if (ascii_islower(previous)) {
+    if (!absl::ascii_isalnum(previous)) {
+      result += absl::ascii_toupper(current);
+    } else if (absl::ascii_isdigit(previous)) {
+      result += absl::ascii_toupper(current);
+    } else if (absl::ascii_islower(previous)) {
       result += current;
     } else {
-      result += ascii_tolower(current);
+      result += absl::ascii_tolower(current);
     }
     previous = current;
   }
@@ -229,7 +251,7 @@ std::string TryRemovePrefix(const std::string& prefix, const std::string& value)
   std::string prefix_to_match = "";
   for (size_t i = 0; i < prefix.size(); i++) {
     if (prefix[i] != '_') {
-      prefix_to_match += ascii_tolower(prefix[i]);
+      prefix_to_match += absl::ascii_tolower(prefix[i]);
     }
   }
 
@@ -242,7 +264,7 @@ std::string TryRemovePrefix(const std::string& prefix, const std::string& value)
     if (value[value_index] == '_') {
       continue;
     }
-    if (ascii_tolower(value[value_index]) != prefix_to_match[prefix_index++]) {
+    if (absl::ascii_tolower(value[value_index]) != prefix_to_match[prefix_index++]) {
       // Failed to match the prefix - bail out early.
       return value;
     }
@@ -276,7 +298,7 @@ std::string GetEnumValueName(const std::string& enum_name, const std::string& en
   std::string result = ShoutyToPascalCase(stripped);
   // Just in case we have an enum name of FOO and a value of FOO_2... make sure the returned
   // string is a valid identifier.
-  if (ascii_isdigit(result[0])) {
+  if (absl::ascii_isdigit(result[0])) {
     result = "_" + result;
   }
   return result;
@@ -379,15 +401,30 @@ std::string GetFieldConstantName(const FieldDescriptor* field) {
 }
 
 std::string GetPropertyName(const FieldDescriptor* descriptor) {
+  // Names of members declared or overridden in the message.
+  static const auto& reserved_member_names = *new absl::flat_hash_set<absl::string_view>({
+    "Types",
+    "Descriptor",
+    "Equals",
+    "ToString",
+    "GetHashCode",
+    "WriteTo",
+    "Clone",
+    "CalculateSize",
+    "MergeFrom",
+    "OnConstruction",
+    "Parser"
+    });
+
   // TODO(jtattermusch): consider introducing csharp_property_name field option
   std::string property_name = UnderscoresToPascalCase(GetFieldName(descriptor));
-  // Avoid either our own type name or reserved names. Note that not all names
-  // are reserved - a field called to_string, write_to etc would still cause a problem.
+  // Avoid either our own type name or reserved names.
   // There are various ways of ending up with naming collisions, but we try to avoid obvious
-  // ones.
+  // ones. In particular, we avoid the names of all the members we generate.
+  // Note that we *don't* add an underscore for MemberwiseClone or GetType. Those generate
+  // warnings, but not errors; changing the name now could be a breaking change.
   if (property_name == descriptor->containing_type()->name()
-      || property_name == "Types"
-      || property_name == "Descriptor") {
+      || reserved_member_names.find(property_name) != reserved_member_names.end()) {
     property_name += "_";
   }
   return property_name;

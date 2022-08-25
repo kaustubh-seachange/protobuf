@@ -44,6 +44,8 @@
 #include <google/protobuf/io/printer.h>
 #include <google/protobuf/wire_format.h>
 #include <google/protobuf/stubs/strutil.h>
+#include "absl/strings/ascii.h"
+#include "absl/strings/str_cat.h"
 #include <google/protobuf/stubs/substitute.h>
 #include <google/protobuf/compiler/java/context.h>
 #include <google/protobuf/compiler/java/doc_comment.h>
@@ -114,6 +116,10 @@ int ImmutableMessageLiteGenerator::GenerateStaticVariableInitializers(
 void ImmutableMessageLiteGenerator::GenerateInterface(io::Printer* printer) {
   MaybePrintGeneratedAnnotation(context_, printer, descriptor_,
                                 /* immutable = */ true, "OrBuilder");
+
+  if (!context_->options().opensource_runtime) {
+    printer->Print("@com.google.protobuf.Internal.ProtoNonnullApi\n");
+  }
   if (descriptor_->extension_range_count() > 0) {
     printer->Print(
         "$deprecation$public interface ${$$classname$OrBuilder$}$ extends \n"
@@ -235,11 +241,13 @@ void ImmutableMessageLiteGenerator::Generate(io::Printer* printer) {
     vars["oneof_name"] = context_->GetOneofGeneratorInfo(oneof)->name;
     vars["oneof_capitalized_name"] =
         context_->GetOneofGeneratorInfo(oneof)->capitalized_name;
-    vars["oneof_index"] = StrCat((oneof)->index());
-    // oneofCase_ and oneof_
-    printer->Print(vars,
-                   "private int $oneof_name$Case_ = 0;\n"
-                   "private java.lang.Object $oneof_name$_;\n");
+    vars["oneof_index"] = absl::StrCat((oneof)->index());
+    if (context_->options().opensource_runtime) {
+      // oneofCase_ and oneof_
+      printer->Print(vars,
+                     "private int $oneof_name$Case_ = 0;\n"
+                     "private java.lang.Object $oneof_name$_;\n");
+    }
     // OneofCase enum
     printer->Print(vars, "public enum $oneof_capitalized_name$Case {\n");
     printer->Indent();
@@ -247,7 +255,7 @@ void ImmutableMessageLiteGenerator::Generate(io::Printer* printer) {
       const FieldDescriptor* field = (oneof)->field(j);
       printer->Print("$field_name$($field_number$),\n", "field_name",
                      ToUpper(field->name()), "field_number",
-                     StrCat(field->number()));
+                     absl::StrCat(field->number()));
     }
     printer->Print("$cap_oneof_name$_NOT_SET(0);\n", "cap_oneof_name",
                    ToUpper(vars["oneof_name"]));
@@ -256,22 +264,26 @@ void ImmutableMessageLiteGenerator::Generate(io::Printer* printer) {
                    "private $oneof_capitalized_name$Case(int value) {\n"
                    "  this.value = value;\n"
                    "}\n");
+    if (context_->options().opensource_runtime) {
+      printer->Print(
+          vars,
+          "/**\n"
+          " * @deprecated Use {@link #forNumber(int)} instead.\n"
+          " */\n"
+          "@java.lang.Deprecated\n"
+          "public static $oneof_capitalized_name$Case valueOf(int value) {\n"
+          "  return forNumber(value);\n"
+          "}\n"
+          "\n");
+    }
     printer->Print(
         vars,
-        "/**\n"
-        " * @deprecated Use {@link #forNumber(int)} instead.\n"
-        " */\n"
-        "@java.lang.Deprecated\n"
-        "public static $oneof_capitalized_name$Case valueOf(int value) {\n"
-        "  return forNumber(value);\n"
-        "}\n"
-        "\n"
         "public static $oneof_capitalized_name$Case forNumber(int value) {\n"
         "  switch (value) {\n");
     for (int j = 0; j < (oneof)->field_count(); j++) {
       const FieldDescriptor* field = (oneof)->field(j);
       printer->Print("    case $field_number$: return $field_name$;\n",
-                     "field_number", StrCat(field->number()),
+                     "field_number", absl::StrCat(field->number()),
                      "field_name", ToUpper(field->name()));
     }
     printer->Print(
@@ -307,7 +319,7 @@ void ImmutableMessageLiteGenerator::Generate(io::Printer* printer) {
   for (int i = 0; i < descriptor_->field_count(); i++) {
     printer->Print("public static final int $constant_name$ = $number$;\n",
                    "constant_name", FieldConstantName(descriptor_->field(i)),
-                   "number", StrCat(descriptor_->field(i)->number()));
+                   "number", absl::StrCat(descriptor_->field(i)->number()));
     field_generators_.get(descriptor_->field(i)).GenerateMembers(printer);
     printer->Print("\n");
   }
@@ -782,8 +794,14 @@ void ImmutableMessageLiteGenerator::GenerateKotlinDsl(
 
 void ImmutableMessageLiteGenerator::GenerateKotlinMembers(
     io::Printer* printer) const {
+  printer->Print("@kotlin.jvm.JvmName(\"-initialize$camelcase_name$\")\n",
+                 "camelcase_name",
+                 name_resolver_->GetKotlinFactoryName(descriptor_));
+
+  if (!context_->options().opensource_runtime) {
+    printer->Print("@com.google.errorprone.annotations.CheckReturnValue\n");
+  }
   printer->Print(
-      "@kotlin.jvm.JvmName(\"-initialize$camelcase_name$\")\n"
       "inline fun $camelcase_name$(block: $message_kt$.Dsl.() -> "
       "kotlin.Unit): $message$ =\n"
       "  $message_kt$.Dsl._create($message$.newBuilder()).apply { block() "
@@ -810,6 +828,9 @@ void ImmutableMessageLiteGenerator::GenerateKotlinMembers(
 
 void ImmutableMessageLiteGenerator::GenerateTopLevelKotlinMembers(
     io::Printer* printer) const {
+  if (!context_->options().opensource_runtime) {
+    printer->Print("@com.google.errorprone.annotations.CheckReturnValue\n");
+  }
   printer->Print(
       "inline fun $message$.copy(block: $message_kt$.Dsl.() -> "
       "kotlin.Unit): $message$ =\n"

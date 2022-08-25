@@ -157,7 +157,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_google_2fprotobuf_2
   &::descriptor_table_google_2fprotobuf_2fsource_5fcontext_2eproto,
   &::descriptor_table_google_2fprotobuf_2ftype_2eproto,
 };
-static ::_pbi::once_flag descriptor_table_google_2fprotobuf_2fapi_2eproto_once;
+static ::absl::once_flag descriptor_table_google_2fprotobuf_2fapi_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_google_2fprotobuf_2fapi_2eproto = {
     false, false, 751, descriptor_table_protodef_google_2fprotobuf_2fapi_2eproto,
     "google/protobuf/api.proto",
@@ -379,7 +379,7 @@ const char* Api::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
       // .google.protobuf.Syntax syntax = 7;
       case 7:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 56)) {
-          uint64_t val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          uint32_t val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
           _internal_set_syntax(static_cast<::PROTOBUF_NAMESPACE_ID::Syntax>(val));
         } else
@@ -806,7 +806,7 @@ const char* Method::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
       // .google.protobuf.Syntax syntax = 7;
       case 7:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 56)) {
-          uint64_t val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          uint32_t val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
           _internal_set_syntax(static_cast<::PROTOBUF_NAMESPACE_ID::Syntax>(val));
         } else

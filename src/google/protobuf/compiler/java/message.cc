@@ -44,6 +44,8 @@
 #include <google/protobuf/io/printer.h>
 #include <google/protobuf/wire_format.h>
 #include <google/protobuf/stubs/strutil.h>
+#include "absl/strings/ascii.h"
+#include "absl/strings/str_cat.h"
 #include <google/protobuf/stubs/substitute.h>
 #include <google/protobuf/compiler/java/context.h>
 #include <google/protobuf/compiler/java/doc_comment.h>
@@ -115,7 +117,7 @@ void ImmutableMessageGenerator::GenerateStaticVariables(
 
   std::map<std::string, std::string> vars;
   vars["identifier"] = UniqueFileScopeIdentifier(descriptor_);
-  vars["index"] = StrCat(descriptor_->index());
+  vars["index"] = absl::StrCat(descriptor_->index());
   vars["classname"] = name_resolver_->GetImmutableClassName(descriptor_);
   if (descriptor_->containing_type() != NULL) {
     vars["parent"] = UniqueFileScopeIdentifier(descriptor_->containing_type());
@@ -159,7 +161,7 @@ int ImmutableMessageGenerator::GenerateStaticVariableInitializers(
   int bytecode_estimate = 0;
   std::map<std::string, std::string> vars;
   vars["identifier"] = UniqueFileScopeIdentifier(descriptor_);
-  vars["index"] = StrCat(descriptor_->index());
+  vars["index"] = absl::StrCat(descriptor_->index());
   vars["classname"] = name_resolver_->GetImmutableClassName(descriptor_);
   if (descriptor_->containing_type() != NULL) {
     vars["parent"] = UniqueFileScopeIdentifier(descriptor_->containing_type());
@@ -261,6 +263,9 @@ int ImmutableMessageGenerator::GenerateFieldAccessorTableInitializer(
 void ImmutableMessageGenerator::GenerateInterface(io::Printer* printer) {
   MaybePrintGeneratedAnnotation(context_, printer, descriptor_,
                                 /* immutable = */ true, "OrBuilder");
+  if (!context_->options().opensource_runtime) {
+    printer->Print("@com.google.protobuf.Internal.ProtoNonnullApi\n");
+  }
   if (descriptor_->extension_range_count() > 0) {
     printer->Print(
         "$deprecation$public interface ${$$classname$OrBuilder$}$ extends\n"
@@ -293,7 +298,7 @@ void ImmutableMessageGenerator::GenerateInterface(io::Printer* printer) {
   for (auto oneof : oneofs_) {
     printer->Print(
         "\n"
-        "public $classname$.$oneof_capitalized_name$Case "
+        "$classname$.$oneof_capitalized_name$Case "
         "get$oneof_capitalized_name$Case();\n",
         "oneof_capitalized_name",
         context_->GetOneofGeneratorInfo(oneof)->capitalized_name, "classname",
@@ -320,6 +325,10 @@ void ImmutableMessageGenerator::Generate(io::Printer* printer) {
   WriteMessageDocComment(printer, descriptor_);
   MaybePrintGeneratedAnnotation(context_, printer, descriptor_,
                                 /* immutable = */ true);
+  if (!context_->options().opensource_runtime) {
+    printer->Print("@com.google.protobuf.Internal.ProtoNonnullApi\n");
+  }
+
   // The builder_type stores the super type name of the nested Builder class.
   std::string builder_type;
   if (descriptor_->extension_range_count() > 0) {
@@ -425,7 +434,7 @@ void ImmutableMessageGenerator::Generate(io::Printer* printer) {
     vars["oneof_name"] = context_->GetOneofGeneratorInfo(oneof)->name;
     vars["oneof_capitalized_name"] =
         context_->GetOneofGeneratorInfo(oneof)->capitalized_name;
-    vars["oneof_index"] = StrCat((oneof)->index());
+    vars["oneof_index"] = absl::StrCat((oneof)->index());
     vars["{"] = "";
     vars["}"] = "";
     // oneofCase_ and oneof_
@@ -448,7 +457,7 @@ void ImmutableMessageGenerator::Generate(io::Printer* printer) {
           "$deprecation$$field_name$($field_number$),\n", "deprecation",
           field->options().deprecated() ? "@java.lang.Deprecated " : "",
           "field_name", ToUpper(field->name()), "field_number",
-          StrCat(field->number()));
+          absl::StrCat(field->number()));
       printer->Annotate("field_name", field);
     }
     printer->Print("$cap_oneof_name$_NOT_SET(0);\n", "cap_oneof_name",
@@ -458,24 +467,28 @@ void ImmutableMessageGenerator::Generate(io::Printer* printer) {
                    "private $oneof_capitalized_name$Case(int value) {\n"
                    "  this.value = value;\n"
                    "}\n");
+    if (context_->options().opensource_runtime) {
+      printer->Print(
+          vars,
+          "/**\n"
+          " * @param value The number of the enum to look for.\n"
+          " * @return The enum associated with the given number.\n"
+          " * @deprecated Use {@link #forNumber(int)} instead.\n"
+          " */\n"
+          "@java.lang.Deprecated\n"
+          "public static $oneof_capitalized_name$Case valueOf(int value) {\n"
+          "  return forNumber(value);\n"
+          "}\n"
+          "\n");
+    }
     printer->Print(
         vars,
-        "/**\n"
-        " * @param value The number of the enum to look for.\n"
-        " * @return The enum associated with the given number.\n"
-        " * @deprecated Use {@link #forNumber(int)} instead.\n"
-        " */\n"
-        "@java.lang.Deprecated\n"
-        "public static $oneof_capitalized_name$Case valueOf(int value) {\n"
-        "  return forNumber(value);\n"
-        "}\n"
-        "\n"
         "public static $oneof_capitalized_name$Case forNumber(int value) {\n"
         "  switch (value) {\n");
     for (int j = 0; j < (oneof)->field_count(); j++) {
       const FieldDescriptor* field = (oneof)->field(j);
       printer->Print("    case $field_number$: return $field_name$;\n",
-                     "field_number", StrCat(field->number()),
+                     "field_number", absl::StrCat(field->number()),
                      "field_name", ToUpper(field->name()));
     }
     printer->Print(
@@ -508,7 +521,7 @@ void ImmutableMessageGenerator::Generate(io::Printer* printer) {
   for (int i = 0; i < descriptor_->field_count(); i++) {
     printer->Print("public static final int $constant_name$ = $number$;\n",
                    "constant_name", FieldConstantName(descriptor_->field(i)),
-                   "number", StrCat(descriptor_->field(i)->number()));
+                   "number", absl::StrCat(descriptor_->field(i)->number()));
     printer->Annotate("constant_name", descriptor_->field(i));
     field_generators_.get(descriptor_->field(i)).GenerateMembers(printer);
     printer->Print("\n");
@@ -824,7 +837,7 @@ void ImmutableMessageGenerator::GenerateDescriptorMethods(
       printer->Print(
           "case $number$:\n"
           "  return internalGet$capitalized_name$();\n",
-          "number", StrCat(field->number()), "capitalized_name",
+          "number", absl::StrCat(field->number()), "capitalized_name",
           info->capitalized_name);
     }
     printer->Print(
@@ -982,6 +995,10 @@ void ImmutableMessageGenerator::GenerateEqualsAndHashCode(
   printer->Print(
       "@java.lang.Override\n"
       "public boolean equals(");
+  if (!context_->options().opensource_runtime) {
+    printer->Print(
+        "@com.google.protobuf.Internal.ProtoMethodAcceptsNullParameter\n");
+  }
   printer->Print("final java.lang.Object obj) {\n");
   printer->Indent();
   printer->Print(
@@ -1030,7 +1047,7 @@ void ImmutableMessageGenerator::GenerateEqualsAndHashCode(
     for (int j = 0; j < (oneof)->field_count(); j++) {
       const FieldDescriptor* field = (oneof)->field(j);
       printer->Print("case $field_number$:\n", "field_number",
-                     StrCat(field->number()));
+                     absl::StrCat(field->number()));
       printer->Indent();
       field_generators_.get(field).GenerateEqualsCode(printer);
       printer->Print("break;\n");
@@ -1104,7 +1121,7 @@ void ImmutableMessageGenerator::GenerateEqualsAndHashCode(
     for (int j = 0; j < (oneof)->field_count(); j++) {
       const FieldDescriptor* field = (oneof)->field(j);
       printer->Print("case $field_number$:\n", "field_number",
-                     StrCat(field->number()));
+                     absl::StrCat(field->number()));
       printer->Indent();
       field_generators_.get(field).GenerateHashCode(printer);
       printer->Print("break;\n");
@@ -1208,7 +1225,7 @@ void ImmutableMessageGenerator::GenerateParsingConstructor(
         field->number(), WireFormat::WireTypeForFieldType(field->type()));
 
     printer->Print("case $tag$: {\n", "tag",
-                   StrCat(static_cast<int32_t>(tag)));
+                   absl::StrCat(static_cast<int32_t>(tag)));
     printer->Indent();
 
     field_generators_.get(field).GenerateParsingCode(printer);
@@ -1224,7 +1241,7 @@ void ImmutableMessageGenerator::GenerateParsingConstructor(
       uint32_t packed_tag = WireFormatLite::MakeTag(
           field->number(), WireFormatLite::WIRETYPE_LENGTH_DELIMITED);
       printer->Print("case $tag$: {\n", "tag",
-                     StrCat(static_cast<int32_t>(packed_tag)));
+                     absl::StrCat(static_cast<int32_t>(packed_tag)));
       printer->Indent();
 
       field_generators_.get(field).GenerateParsingCodeFromPacked(printer);
@@ -1440,8 +1457,15 @@ void ImmutableMessageGenerator::GenerateKotlinDsl(io::Printer* printer) const {
 
 void ImmutableMessageGenerator::GenerateKotlinMembers(
     io::Printer* printer) const {
+  printer->Print("@kotlin.jvm.JvmName(\"-initialize$camelcase_name$\")\n",
+                 "camelcase_name",
+                 name_resolver_->GetKotlinFactoryName(descriptor_));
+
+  if (!context_->options().opensource_runtime) {
+    printer->Print("@com.google.errorprone.annotations.CheckReturnValue\n");
+  }
+
   printer->Print(
-      "@kotlin.jvm.JvmName(\"-initialize$camelcase_name$\")\n"
       "inline fun $camelcase_name$(block: $message_kt$.Dsl.() -> "
       "kotlin.Unit): "
       "$message$ "
@@ -1470,8 +1494,13 @@ void ImmutableMessageGenerator::GenerateKotlinMembers(
 
 void ImmutableMessageGenerator::GenerateTopLevelKotlinMembers(
     io::Printer* printer) const {
+  printer->Print("@kotlin.jvm.JvmSynthetic\n");
+
+  if (context_->options().opensource_runtime) {
+    printer->Print("@com.google.errorprone.annotations.CheckReturnValue\n");
+  }
+
   printer->Print(
-      "@kotlin.jvm.JvmSynthetic\n"
       "inline fun $message$.copy(block: $message_kt$.Dsl.() -> "
       "kotlin.Unit): $message$ =\n"
       "  $message_kt$.Dsl._create(this.toBuilder()).apply { block() "
@@ -1716,7 +1745,8 @@ void ImmutableMessageGenerator::GenerateAnyMethods(io::Printer* printer) {
       "@java.lang.SuppressWarnings(\"unchecked\")\n"
       "public <T extends com.google.protobuf.Message> T unpack(\n"
       "    java.lang.Class<T> clazz)\n"
-      "    throws com.google.protobuf.InvalidProtocolBufferException {\n"
+      "    throws com.google.protobuf.InvalidProtocolBufferException {\n");
+  printer->Print(
       "  boolean invalidClazz = false;\n"
       "  if (cachedUnpackValue != null) {\n"
       "    if (cachedUnpackValue.getClass() == clazz) {\n"
